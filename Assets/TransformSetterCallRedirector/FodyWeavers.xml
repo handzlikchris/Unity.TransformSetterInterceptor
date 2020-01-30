@@ -1,0 +1,7 @@
+﻿<Weavers>
+  <Malimbe.FodyRunner>
+    <LogLevel>Info, Error, Warning</LogLevel>
+    <AssemblyNameRegex>^Assembly-CSharp</AssemblyNameRegex>
+  </Malimbe.FodyRunner>
+  <TransformSetterCallRedirector />
+</Weavers>

@@ -1,0 +1,11 @@
+{
+    "name": "TransformSetterCallRedirector.Attribute",
+    "references": [],
+    "optionalUnityReferences": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "versionDefines": [
+        
+    ]
+}
