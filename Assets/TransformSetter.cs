@@ -1,5 +1,4 @@
 ﻿using System.Collections;
-using System.Linq;
 using UnityEngine;
 
 public class TransformSetter : MonoBehaviour
@@ -21,7 +20,7 @@ public class TransformSetter : MonoBehaviour
     {
         SetTarget.transform.position = new Vector3(iteration, iteration, iteration);
         SetTarget.transform.rotation = Quaternion.Euler(iteration, iteration, iteration);
-        SetTarget.transform.localScale = new Vector3(iteration, iteration, iteration);    
+        SetTarget.transform.localScale = new Vector3(iteration, iteration, iteration);
     }
 
     void Start()

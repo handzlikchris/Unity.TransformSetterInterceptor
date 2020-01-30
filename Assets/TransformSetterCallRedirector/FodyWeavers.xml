@@ -3,5 +3,5 @@
     <LogLevel>Info, Error, Warning</LogLevel>
     <AssemblyNameRegex>^Assembly-CSharp</AssemblyNameRegex>
   </Malimbe.FodyRunner>
-  <TransformSetterCallRedirector />
+  <TransformSetterCallRedirector  /> <!--FallbackSampleNameFormat="{0} - {1} - {2}"-->
 </Weavers>

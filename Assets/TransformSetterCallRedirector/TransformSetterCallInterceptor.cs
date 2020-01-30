@@ -1,8 +1,11 @@
 ﻿using Assets.TransformSetterCallRedirector.Attribute;
 using UnityEngine;
 
-[assembly: TransformSetterCallRedirector(nameof(TransformSetterCallInterceptor), ".*",
-     ExcludeFullMethodNameRegex = "")]
+[assembly: TransformSetterCallRedirector(
+    nameof(TransformSetterCallInterceptor), 
+    ".*",
+     ExcludeFullMethodNameRegex = ""
+)]
 
 public class TransformSetterCallInterceptor
 {

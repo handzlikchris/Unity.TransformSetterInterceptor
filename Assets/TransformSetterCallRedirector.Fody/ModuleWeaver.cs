@@ -21,11 +21,10 @@ namespace TransformSetterCallRedirector.Fody
         private const string FallbackReplaceCallsFromNamespacesRegexName = "FallbackReplaceCallsFromNamespacesRegex";
         private const string FallbackExcludeFullMethodNameRegexName = "FallbackExcludeFullMethodNameRegex";
 
-        private const string DefaultFallbackSampleNameFormat = "____{0} ({1}) <{2}>____";
         private const string DefaultFallbackReplaceCallsFromNamespacesRegex = ".*";
         private const string DefaultFallbackExcludeFullMethodNameRegex = "";
         
-        private TypeDefinition interceptorType;
+        private TypeDefinition _interceptorType;
         private string _replaceCallsFromNamespacesRegex;
         private string _excludeFullMethodNameRegex;
         private MethodReference _unityObjectGetName;
@@ -42,6 +41,7 @@ namespace TransformSetterCallRedirector.Fody
         private MethodDefinition _interceptSetLocalPosition;
         private MethodDefinition _interceptSetRotation;
         private MethodDefinition _interceptSetScale;
+        private MethodReference _debugLog;
 
         public override bool ShouldCleanReference => true;
 
@@ -56,35 +56,40 @@ namespace TransformSetterCallRedirector.Fody
             if (!TryFindRequiredAssemblyAttribute())
             {
                 LogInfo($"Assembly :{ModuleDefinition.Assembly.Name} does not specify attribute " +
-                        $"{FullAttributeName} which is needed for processing. Falling back to inline IL rewrite");
+                        $"{FullAttributeName} which is needed for processing");
                 LoadXmlSetup();
+
+                if (string.IsNullOrEmpty(_fallbackSampleFormat))
+                {
+                    LogInfo($"Assembly :{ModuleDefinition.Assembly.Name} no XML {FallbackSampleNameFormatName} string specified, rewrite not performed.");
+                    return;
+                }
             }
             else
             {
                 LoadAttributeSetup();
-                LoadXmlSetup();
             }
 
             FindReferences();
 
             //TODO: allow to control which ones to intercept via attribute flag
-            var methodCallToInterceptor = new Dictionary<MethodReference, MethodDefinition>()
+            var methodCallToInterceptor = new List<RedirectionMethodArg>()
             {
-                [_transformSetLocalPosition] = _interceptSetLocalPosition,
-                [_transformSetPosition] = _interceptSetPosition,
-                [_transformSetRotation] = _interceptSetRotation,
-                [_transformSetScale] = _interceptSetScale,
+                new RedirectionMethodArg(_transformSetLocalPosition, _interceptSetLocalPosition, "localPosition"),
+                new RedirectionMethodArg(_transformSetPosition, _interceptSetPosition, "position"),
+                new RedirectionMethodArg(_transformSetRotation, _interceptSetRotation, "rotation"),
+                new RedirectionMethodArg(_transformSetScale, _interceptSetScale, "scale"),
             };
 
-            foreach (var kv in methodCallToInterceptor)
+            foreach (var arg in methodCallToInterceptor)
             {
-                var methodWithInstructionsToReplace = FindMethodsWithInstructionsCallingTransformSetter(kv.Key.Resolve());
-                InterceptUnityEventInvokeCalls(methodWithInstructionsToReplace, kv.Value);
+                var methodWithInstructionsToReplace = FindMethodsWithInstructionsCallingTransformSetter(arg.RedirectCallsFrom.Resolve());
+                InterceptUnityEventInvokeCalls(methodWithInstructionsToReplace, arg.RedirectCallsTo, arg.RedirectingFor);
             }
         }
 
         private void InterceptUnityEventInvokeCalls(List<MethodDefinitionInstructionToReplacePair> methodWithInstructionsToReplace, 
-            MethodDefinition replaceWithInterceptorMethod)
+            MethodDefinition replaceWithInterceptorMethod, string rewritingFor)
         {
             foreach (var methodWithInstructionToReplace in methodWithInstructionsToReplace)
             {
@@ -101,33 +106,31 @@ namespace TransformSetterCallRedirector.Fody
 
                     LogDebug($"Redirected: {method.DeclaringType.Name}::{method.Name} via interceptor");
                 }
-                //else
-                //{ 
-                //var beginSampleInstructions = new List<Instruction>
-                //{
-                //    il.Create(OpCodes.Ldstr, _fallbackSampleFormat),
-                //    il.Create(OpCodes.Ldarg_0),
-                //    il.Create(OpCodes.Callvirt, _unityObjectGetName),
-                //    il.Create(OpCodes.Ldarg_0),
-                //    il.Create(OpCodes.Callvirt, _objectGetType),
-                //    il.Create(OpCodes.Callvirt, _memberInfoGetName),
-                //    il.Create(OpCodes.Ldstr, method.Name),
-                //    il.Create(OpCodes.Call, _stringFormat),
-                //    il.Create(OpCodes.Ldarg_0),
-                //    il.Create(OpCodes.Call, _beginSample),
-                //};
+                else if(!string.IsNullOrEmpty(_fallbackSampleFormat))
+                {
+                    var beginSampleInstructions = new List<Instruction>
+                    {
+                        il.Create(OpCodes.Ldstr, $"{rewritingFor}: {_fallbackSampleFormat}"),
+                        il.Create(OpCodes.Ldarg_0),
+                        il.Create(OpCodes.Callvirt, _unityObjectGetName),
+                        il.Create(OpCodes.Ldarg_0),
+                        il.Create(OpCodes.Callvirt, _objectGetType),
+                        il.Create(OpCodes.Callvirt, _memberInfoGetName),
+                        il.Create(OpCodes.Ldstr, method.Name),
+                        il.Create(OpCodes.Call, _stringFormat),
+                        il.Create(OpCodes.Ldarg_0),
+                        il.Create(OpCodes.Call, _debugLog),
+                    };
 
-                //beginSampleInstructions.ForEach(i => il.InsertBefore(instruction, i));
+                    beginSampleInstructions.ForEach(i => il.InsertBefore(instruction, i));
 
-                //il.InsertAfter(instruction, il.Create(OpCodes.Call, _endSample));
-
-                //LogDebug($"{ModuleDefinition.Assembly.Name} Redirected: {method.DeclaringType.Name}::{method.Name} via fallback inline IL");
-                //}
+                    LogDebug($"{ModuleDefinition.Assembly.Name} Redirected {rewritingFor}: {method.DeclaringType.Name}::{method.Name} via fallback inline IL");
+                }
                 method.Body.OptimizeMacros();
 
             }
 
-            LogInfo($"{ModuleDefinition.Assembly.Name} Redirected: {methodWithInstructionsToReplace.Count} calls via {(replaceWithInterceptorMethod != null ? "interceptor" : "fallback inline IL")}");
+            LogInfo($"{ModuleDefinition.Assembly.Name} Redirected {rewritingFor}: {methodWithInstructionsToReplace.Count} calls via {(replaceWithInterceptorMethod != null ? "interceptor" : "fallback inline IL")}");
         }
 
         private List<MethodDefinitionInstructionToReplacePair> FindMethodsWithInstructionsCallingTransformSetter(MethodDefinition callingToMethod)
@@ -135,8 +138,8 @@ namespace TransformSetterCallRedirector.Fody
             var methodWithInstructionsToReplace = new List<MethodDefinitionInstructionToReplacePair>();
 
             foreach (var t in ModuleDefinition.Types
-                .Where(t => Regex.IsMatch(t.Namespace, _replaceCallsFromNamespacesRegex))
-                .Where(t => t != interceptorType))
+                .Where(t => string.IsNullOrEmpty(_replaceCallsFromNamespacesRegex) || Regex.IsMatch(t.Namespace, _replaceCallsFromNamespacesRegex))
+                .Where(t => t != _interceptorType))
             {
                 foreach (var method in t.Methods)
                 {
@@ -172,6 +175,7 @@ namespace TransformSetterCallRedirector.Fody
             _memberInfoGetName = ImportPropertyGetter(typeof(MemberInfo), m => m.Name == nameof(MemberInfo.Name));
             _stringFormat = ImportMethod(typeof(string),
                 m => m.FullName == "System.String System.String::Format(System.String,System.Object,System.Object,System.Object)");
+            _debugLog = ImportMethod(typeof(Debug), m => m.Name == nameof(Debug.Log) && m.Parameters.Count == 2);
             
             _transformSetPosition = ImportPropertySetter(typeof(Transform), m => m.Name == nameof(Transform.position));
             _transformSetLocalPosition = ImportPropertySetter(typeof(Transform), m => m.Name == nameof(Transform.localPosition));
@@ -191,11 +195,11 @@ namespace TransformSetterCallRedirector.Fody
         {
             var interceptorTypeName = _callRedirectorAttribute.ConstructorArguments[0].Value.ToString();
 
-            interceptorType = ModuleDefinition.Types.First(t => t.Name == interceptorTypeName);
-            _interceptSetPosition = interceptorType.Methods.First(m => m.Name == "InterceptSetPosition");
-            _interceptSetLocalPosition = interceptorType.Methods.First(m => m.Name == "InterceptSetLocalPosition");
-            _interceptSetRotation = interceptorType.Methods.First(m => m.Name == "InterceptSetRotation");
-            _interceptSetScale = interceptorType.Methods.First(m => m.Name == "InterceptSetScale");
+            _interceptorType = ModuleDefinition.Types.First(t => t.Name == interceptorTypeName);
+            _interceptSetPosition = _interceptorType.Methods.First(m => m.Name == "InterceptSetPosition");
+            _interceptSetLocalPosition = _interceptorType.Methods.First(m => m.Name == "InterceptSetLocalPosition");
+            _interceptSetRotation = _interceptorType.Methods.First(m => m.Name == "InterceptSetRotation");
+            _interceptSetScale = _interceptorType.Methods.First(m => m.Name == "InterceptSetScale");
             
             _replaceCallsFromNamespacesRegex = _callRedirectorAttribute.ConstructorArguments[1].Value?.ToString();
             _excludeFullMethodNameRegex = _callRedirectorAttribute.Properties.Single(p => p.Name == nameof(TransformSetterCallRedirectorAttribute.ExcludeFullMethodNameRegex)).Argument.Value?.ToString();
@@ -203,7 +207,7 @@ namespace TransformSetterCallRedirector.Fody
 
         private void LoadXmlSetup()
         {
-            _fallbackSampleFormat = Config.Attribute(FallbackSampleNameFormatName)?.Value ?? DefaultFallbackSampleNameFormat;
+            _fallbackSampleFormat = Config.Attribute(FallbackSampleNameFormatName)?.Value;
             _replaceCallsFromNamespacesRegex = Config.Attribute(FallbackReplaceCallsFromNamespacesRegexName)?.Value ?? DefaultFallbackReplaceCallsFromNamespacesRegex;
             _excludeFullMethodNameRegex = Config.Attribute(FallbackExcludeFullMethodNameRegexName)?.Value ?? DefaultFallbackExcludeFullMethodNameRegex;
         }
@@ -223,6 +227,20 @@ namespace TransformSetterCallRedirector.Fody
         {
             var prop = ModuleDefinition.ImportReference(type).Resolve().Properties.First(propertyPredicate);
             return ModuleDefinition.ImportReference(prop.SetMethod);
+        }
+
+        private class RedirectionMethodArg
+        {
+            public MethodReference RedirectCallsFrom { get; }
+            public MethodDefinition RedirectCallsTo { get; }
+            public string RedirectingFor { get; }
+
+            public RedirectionMethodArg(MethodReference redirectCallsFrom, MethodDefinition redirectCallsTo, string redirectingFor)
+            {
+                RedirectCallsFrom = redirectCallsFrom;
+                RedirectCallsTo = redirectCallsTo;
+                RedirectingFor = redirectingFor;
+            }
         }
 
         private class MethodDefinitionInstructionToReplacePair

@@ -2,9 +2,6 @@
 
 namespace Assets.TransformSetterCallRedirector.Attribute
 {
-    /// <summary>
-    /// Indicates that the property's backing field is serialized.
-    /// </summary>
     [AttributeUsage(AttributeTargets.Assembly)]
     public sealed class TransformSetterCallRedirectorAttribute : System.Attribute
     {
