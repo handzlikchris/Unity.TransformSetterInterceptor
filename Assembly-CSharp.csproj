@@ -65,6 +65,7 @@
   <ItemGroup>
     <Compile Include="Assets\TransformSetter.cs" />
     <Compile Include="Assets\TransformSetterCallRedirector\TransformSetterCallInterceptor.cs" />
+    <Compile Include="Assets\TransformSetterInterceptorFilter.cs" />
     <None Include="Assets\TransformSetterCallRedirector\FodyWeavers.xml" />
     <Reference Include="Unity.Timeline.Editor">
       <HintPath>F:/_src/!Unity/InterceptingTransformSetters/Library/ScriptAssemblies/Unity.Timeline.Editor.dll</HintPath>

@@ -1,9 +1,10 @@
 ﻿using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class TransformSetter : MonoBehaviour
 {
-    public GameObject SetTarget;
+    public List<GameObject> SetTargets;
 
     private int iteration = 0;
     IEnumerator SetTransformValuesCoroutine()
@@ -12,15 +13,18 @@ public class TransformSetter : MonoBehaviour
         {
             iteration++;
             SetTransformValues();
-            yield return new WaitForSeconds(1);
+            yield return new WaitForSeconds(1);  
         }
     }
 
-    private void SetTransformValues()
+    private void SetTransformValues()          
     {
-        SetTarget.transform.position = new Vector3(iteration, iteration, iteration);
-        SetTarget.transform.rotation = Quaternion.Euler(iteration, iteration, iteration);
-        SetTarget.transform.localScale = new Vector3(iteration, iteration, iteration);
+        foreach (var target in SetTargets)     
+        { 
+            target.transform.position = new Vector3(iteration, iteration, iteration);  
+            target.transform.rotation = Quaternion.Euler(iteration, iteration, iteration);  
+            target.transform.localScale = new Vector3(iteration, iteration, iteration); 
+        }
     }
 
     void Start()

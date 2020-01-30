@@ -42,6 +42,9 @@ namespace TransformSetterCallRedirector.Fody
         private MethodDefinition _interceptSetRotation;
         private MethodDefinition _interceptSetScale;
         private MethodReference _debugLog;
+        private MethodReference _getTransform;
+        private TypeReference _transformType;
+        private TypeReference _vector3Type;
 
         public override bool ShouldCleanReference => true;
 
@@ -75,10 +78,10 @@ namespace TransformSetterCallRedirector.Fody
             //TODO: allow to control which ones to intercept via attribute flag
             var methodCallToInterceptor = new List<RedirectionMethodArg>()
             {
-                new RedirectionMethodArg(_transformSetLocalPosition, _interceptSetLocalPosition, "localPosition"),
+                //new RedirectionMethodArg(_transformSetLocalPosition, _interceptSetLocalPosition, "localPosition"),
                 new RedirectionMethodArg(_transformSetPosition, _interceptSetPosition, "position"),
-                new RedirectionMethodArg(_transformSetRotation, _interceptSetRotation, "rotation"),
-                new RedirectionMethodArg(_transformSetScale, _interceptSetScale, "scale"),
+                //new RedirectionMethodArg(_transformSetRotation, _interceptSetRotation, "rotation"),
+                //new RedirectionMethodArg(_transformSetScale, _interceptSetScale, "scale"),
             };
 
             foreach (var arg in methodCallToInterceptor)
@@ -108,21 +111,36 @@ namespace TransformSetterCallRedirector.Fody
                 }
                 else if(!string.IsNullOrEmpty(_fallbackSampleFormat))
                 {
-                    var beginSampleInstructions = new List<Instruction>
+                    //without reimporting that doesn't work
+                    var vector3 = new VariableDefinition(_vector3Type);
+                    il.Body.Variables.Add(vector3);
+                    var transform = new VariableDefinition(_transformType);
+                    il.Body.Variables.Add(transform);
+
+
+                    //store variables from stack so they can be used
+                    il.InsertBefore(instruction, il.Create(OpCodes.Stloc, vector3));
+                    il.InsertBefore(instruction,  il.Create(OpCodes.Stloc, transform));
+                    
+                    var logInfoInstructions = new List<Instruction>
                     {
                         il.Create(OpCodes.Ldstr, $"{rewritingFor}: {_fallbackSampleFormat}"),
+                        il.Create(OpCodes.Ldloc, transform),
                         il.Create(OpCodes.Ldarg_0),
                         il.Create(OpCodes.Callvirt, _unityObjectGetName),
-                        il.Create(OpCodes.Ldarg_0),
-                        il.Create(OpCodes.Callvirt, _objectGetType),
-                        il.Create(OpCodes.Callvirt, _memberInfoGetName),
-                        il.Create(OpCodes.Ldstr, method.Name),
+                        il.Create(OpCodes.Ldloc, vector3),
+                        il.Create(OpCodes.Box, _vector3Type),
                         il.Create(OpCodes.Call, _stringFormat),
                         il.Create(OpCodes.Ldarg_0),
                         il.Create(OpCodes.Call, _debugLog),
                     };
 
-                    beginSampleInstructions.ForEach(i => il.InsertBefore(instruction, i));
+                    logInfoInstructions.ForEach(i => il.InsertBefore(instruction, i));
+
+                    //reload variables required for calling method
+                    il.InsertBefore(instruction, il.Create(OpCodes.Ldloc, transform));
+                    il.InsertBefore(instruction, il.Create(OpCodes.Ldloc, vector3));
+                    
 
                     LogDebug($"{ModuleDefinition.Assembly.Name} Redirected {rewritingFor}: {method.DeclaringType.Name}::{method.Name} via fallback inline IL");
                 }
@@ -176,7 +194,15 @@ namespace TransformSetterCallRedirector.Fody
             _stringFormat = ImportMethod(typeof(string),
                 m => m.FullName == "System.String System.String::Format(System.String,System.Object,System.Object,System.Object)");
             _debugLog = ImportMethod(typeof(Debug), m => m.Name == nameof(Debug.Log) && m.Parameters.Count == 2);
-            
+
+            _getTransform = ImportPropertyGetter(typeof(GameObject), m => m.Name == nameof(GameObject.transform));
+
+            var unityEngineAssemblyFullReference = ModuleDefinition.AssemblyReferences.First(ar => ar.Name == "UnityEngine.CoreModule");
+            var unityAssembly = ModuleDefinition.AssemblyResolver.Resolve(unityEngineAssemblyFullReference);
+
+            _transformType = ModuleDefinition.ImportReference(unityAssembly.MainModule.Types.First(t => t.Name == nameof(Transform)));
+            _vector3Type = ModuleDefinition.ImportReference(unityAssembly.MainModule.Types.First(t => t.Name == nameof(Vector3)));
+
             _transformSetPosition = ImportPropertySetter(typeof(Transform), m => m.Name == nameof(Transform.position));
             _transformSetLocalPosition = ImportPropertySetter(typeof(Transform), m => m.Name == nameof(Transform.localPosition));
             _transformSetRotation = ImportPropertySetter(typeof(Transform), m => m.Name == nameof(Transform.rotation));
