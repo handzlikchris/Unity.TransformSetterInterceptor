@@ -45,6 +45,7 @@ namespace TransformSetterCallRedirector.Fody
         private MethodReference _getTransform;
         private TypeReference _transformType;
         private TypeReference _vector3Type;
+        private TypeReference _quaternionType;
 
         public override bool ShouldCleanReference => true;
 
@@ -75,24 +76,23 @@ namespace TransformSetterCallRedirector.Fody
 
             FindReferences();
 
-            //TODO: allow to control which ones to intercept via attribute flag
-            var methodCallToInterceptor = new List<RedirectionMethodArg>()
+            var redirectMethodsSetup = new List<RedirectionMethodArg>()
             {
-                //new RedirectionMethodArg(_transformSetLocalPosition, _interceptSetLocalPosition, "localPosition"),
-                new RedirectionMethodArg(_transformSetPosition, _interceptSetPosition, "position"),
-                //new RedirectionMethodArg(_transformSetRotation, _interceptSetRotation, "rotation"),
-                //new RedirectionMethodArg(_transformSetScale, _interceptSetScale, "scale"),
+                new RedirectionMethodArg(_transformSetLocalPosition, _interceptSetLocalPosition, "localPosition", _vector3Type),
+                new RedirectionMethodArg(_transformSetPosition, _interceptSetPosition, "position", _vector3Type),
+                new RedirectionMethodArg(_transformSetRotation, _interceptSetRotation, "rotation", _quaternionType),
+                new RedirectionMethodArg(_transformSetScale, _interceptSetScale, "scale", _vector3Type),
             };
 
-            foreach (var arg in methodCallToInterceptor)
+            foreach (var arg in redirectMethodsSetup)
             {
                 var methodWithInstructionsToReplace = FindMethodsWithInstructionsCallingTransformSetter(arg.RedirectCallsFrom.Resolve());
-                InterceptUnityEventInvokeCalls(methodWithInstructionsToReplace, arg.RedirectCallsTo, arg.RedirectingFor);
+                InterceptUnityEventInvokeCalls(methodWithInstructionsToReplace, arg.RedirectCallsTo, arg.RedirectingFor, arg.SetMethodParameterTypeReference);
             }
         }
 
         private void InterceptUnityEventInvokeCalls(List<MethodDefinitionInstructionToReplacePair> methodWithInstructionsToReplace, 
-            MethodDefinition replaceWithInterceptorMethod, string rewritingFor)
+            MethodDefinition replaceWithInterceptorMethod, string rewritingFor, TypeReference setMethodParameterType)
         {
             foreach (var methodWithInstructionToReplace in methodWithInstructionsToReplace)
             {
@@ -111,25 +111,23 @@ namespace TransformSetterCallRedirector.Fody
                 }
                 else if(!string.IsNullOrEmpty(_fallbackSampleFormat))
                 {
-                    //without reimporting that doesn't work
-                    var vector3 = new VariableDefinition(_vector3Type);
-                    il.Body.Variables.Add(vector3);
-                    var transform = new VariableDefinition(_transformType);
-                    il.Body.Variables.Add(transform);
+                    var setMethodParameterVariable = new VariableDefinition(setMethodParameterType);
+                    il.Body.Variables.Add(setMethodParameterVariable);
+                    var transformVariable = new VariableDefinition(_transformType);
+                    il.Body.Variables.Add(transformVariable);
 
 
-                    //store variables from stack so they can be used
-                    il.InsertBefore(instruction, il.Create(OpCodes.Stloc, vector3));
-                    il.InsertBefore(instruction,  il.Create(OpCodes.Stloc, transform));
+                    il.InsertBefore(instruction, il.Create(OpCodes.Stloc, setMethodParameterVariable));
+                    il.InsertBefore(instruction,  il.Create(OpCodes.Stloc, transformVariable));
                     
                     var logInfoInstructions = new List<Instruction>
                     {
                         il.Create(OpCodes.Ldstr, $"{rewritingFor}: {_fallbackSampleFormat}"),
-                        il.Create(OpCodes.Ldloc, transform),
+                        il.Create(OpCodes.Ldloc, transformVariable),
                         il.Create(OpCodes.Ldarg_0),
                         il.Create(OpCodes.Callvirt, _unityObjectGetName),
-                        il.Create(OpCodes.Ldloc, vector3),
-                        il.Create(OpCodes.Box, _vector3Type),
+                        il.Create(OpCodes.Ldloc, setMethodParameterVariable),
+                        il.Create(OpCodes.Box, setMethodParameterType),
                         il.Create(OpCodes.Call, _stringFormat),
                         il.Create(OpCodes.Ldarg_0),
                         il.Create(OpCodes.Call, _debugLog),
@@ -137,9 +135,8 @@ namespace TransformSetterCallRedirector.Fody
 
                     logInfoInstructions.ForEach(i => il.InsertBefore(instruction, i));
 
-                    //reload variables required for calling method
-                    il.InsertBefore(instruction, il.Create(OpCodes.Ldloc, transform));
-                    il.InsertBefore(instruction, il.Create(OpCodes.Ldloc, vector3));
+                    il.InsertBefore(instruction, il.Create(OpCodes.Ldloc, transformVariable));
+                    il.InsertBefore(instruction, il.Create(OpCodes.Ldloc, setMethodParameterVariable));
                     
 
                     LogDebug($"{ModuleDefinition.Assembly.Name} Redirected {rewritingFor}: {method.DeclaringType.Name}::{method.Name} via fallback inline IL");
@@ -197,11 +194,9 @@ namespace TransformSetterCallRedirector.Fody
 
             _getTransform = ImportPropertyGetter(typeof(GameObject), m => m.Name == nameof(GameObject.transform));
 
-            var unityEngineAssemblyFullReference = ModuleDefinition.AssemblyReferences.First(ar => ar.Name == "UnityEngine.CoreModule");
-            var unityAssembly = ModuleDefinition.AssemblyResolver.Resolve(unityEngineAssemblyFullReference);
-
-            _transformType = ModuleDefinition.ImportReference(unityAssembly.MainModule.Types.First(t => t.Name == nameof(Transform)));
-            _vector3Type = ModuleDefinition.ImportReference(unityAssembly.MainModule.Types.First(t => t.Name == nameof(Vector3)));
+            _transformType = ModuleDefinition.ImportReference(typeof(Transform));
+            _vector3Type = ModuleDefinition.ImportReference(typeof(Vector3));
+            _quaternionType = ModuleDefinition.ImportReference(typeof(Quaternion));
 
             _transformSetPosition = ImportPropertySetter(typeof(Transform), m => m.Name == nameof(Transform.position));
             _transformSetLocalPosition = ImportPropertySetter(typeof(Transform), m => m.Name == nameof(Transform.localPosition));
@@ -260,12 +255,15 @@ namespace TransformSetterCallRedirector.Fody
             public MethodReference RedirectCallsFrom { get; }
             public MethodDefinition RedirectCallsTo { get; }
             public string RedirectingFor { get; }
+            public TypeReference SetMethodParameterTypeReference { get; }
 
-            public RedirectionMethodArg(MethodReference redirectCallsFrom, MethodDefinition redirectCallsTo, string redirectingFor)
+            public RedirectionMethodArg(MethodReference redirectCallsFrom, MethodDefinition redirectCallsTo, string redirectingFor,
+                TypeReference setMethodParameterTypeReference)
             {
                 RedirectCallsFrom = redirectCallsFrom;
                 RedirectCallsTo = redirectCallsTo;
                 RedirectingFor = redirectingFor;
+                SetMethodParameterTypeReference = setMethodParameterTypeReference;
             }
         }
 

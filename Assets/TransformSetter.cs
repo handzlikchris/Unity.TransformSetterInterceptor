@@ -19,9 +19,10 @@ public class TransformSetter : MonoBehaviour
 
     private void SetTransformValues()          
     {
-        foreach (var target in SetTargets)     
+        foreach (var target in SetTargets)
         { 
-            target.transform.position = new Vector3(iteration, iteration, iteration);  
+            target.transform.position
+            target.transform.position = new Vector3(iteration, iteration, iteration);    
             target.transform.rotation = Quaternion.Euler(iteration, iteration, iteration);  
             target.transform.localScale = new Vector3(iteration, iteration, iteration); 
         }
