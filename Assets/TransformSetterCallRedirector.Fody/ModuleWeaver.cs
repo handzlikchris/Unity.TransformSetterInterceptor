@@ -23,7 +23,7 @@ namespace TransformSetterCallRedirector.Fody
 
         private const string DefaultFallbackReplaceCallsFromNamespacesRegex = ".*";
         private const string DefaultFallbackExcludeFullMethodNameRegex = "";
-        
+
         private TypeDefinition _interceptorType;
         private string _replaceCallsFromNamespacesRegex;
         private string _excludeFullMethodNameRegex;
@@ -91,7 +91,7 @@ namespace TransformSetterCallRedirector.Fody
             }
         }
 
-        private void InterceptUnityEventInvokeCalls(List<MethodDefinitionInstructionToReplacePair> methodWithInstructionsToReplace, 
+        private void InterceptUnityEventInvokeCalls(List<MethodDefinitionInstructionToReplacePair> methodWithInstructionsToReplace,
             MethodDefinition replaceWithInterceptorMethod, string rewritingFor, TypeReference setMethodParameterType)
         {
             foreach (var methodWithInstructionToReplace in methodWithInstructionsToReplace)
@@ -103,13 +103,18 @@ namespace TransformSetterCallRedirector.Fody
                 method.Body.SimplifyMacros();
                 if (replaceWithInterceptorMethod != null)
                 {
-                    il.InsertBefore(instruction, il.Create(OpCodes.Ldarg_0));
+                    if (method.IsStatic)
+                        il.InsertBefore(instruction, il.Create(OpCodes.Ldstr, "Static:" + method.FullName));
+                    else
+                        il.InsertBefore(instruction, il.Create(OpCodes.Ldarg_0));
+
+
                     il.InsertBefore(instruction, il.Create(OpCodes.Ldstr, method.Name));
                     il.Replace(instruction, il.Create(OpCodes.Call, replaceWithInterceptorMethod));
 
                     LogDebug($"Redirected: {method.DeclaringType.Name}::{method.Name} via interceptor");
                 }
-                else if(!string.IsNullOrEmpty(_fallbackSampleFormat))
+                else if (!string.IsNullOrEmpty(_fallbackSampleFormat))
                 {
                     var setMethodParameterVariable = new VariableDefinition(setMethodParameterType);
                     il.Body.Variables.Add(setMethodParameterVariable);
@@ -118,26 +123,34 @@ namespace TransformSetterCallRedirector.Fody
 
 
                     il.InsertBefore(instruction, il.Create(OpCodes.Stloc, setMethodParameterVariable));
-                    il.InsertBefore(instruction,  il.Create(OpCodes.Stloc, transformVariable));
-                    
-                    var logInfoInstructions = new List<Instruction>
-                    {
-                        il.Create(OpCodes.Ldstr, $"{rewritingFor}: {_fallbackSampleFormat}"),
-                        il.Create(OpCodes.Ldloc, transformVariable),
-                        il.Create(OpCodes.Ldarg_0),
-                        il.Create(OpCodes.Callvirt, _unityObjectGetName),
-                        il.Create(OpCodes.Ldloc, setMethodParameterVariable),
-                        il.Create(OpCodes.Box, setMethodParameterType),
-                        il.Create(OpCodes.Call, _stringFormat),
-                        il.Create(OpCodes.Ldarg_0),
-                        il.Create(OpCodes.Call, _debugLog),
-                    };
+                    il.InsertBefore(instruction, il.Create(OpCodes.Stloc, transformVariable));
 
-                    logInfoInstructions.ForEach(i => il.InsertBefore(instruction, i));
+
+                    il.InsertBefore(instruction, il.Create(OpCodes.Ldstr, $"{rewritingFor}: {_fallbackSampleFormat}"));
+                    il.InsertBefore(instruction, il.Create(OpCodes.Ldloc, transformVariable));
+                    if (method.IsStatic)
+                    {
+                        il.InsertBefore(instruction, il.Create(OpCodes.Ldstr, "Static:" + method.FullName));
+                    }
+                    else
+                    {
+                        il.InsertBefore(instruction, il.Create(OpCodes.Ldarg_0));
+                        il.InsertBefore(instruction, il.Create(OpCodes.Callvirt, _unityObjectGetName));
+                    }
+                    il.InsertBefore(instruction, il.Create(OpCodes.Ldloc, setMethodParameterVariable));
+                    il.InsertBefore(instruction, il.Create(OpCodes.Box, setMethodParameterType));
+                    il.InsertBefore(instruction, il.Create(OpCodes.Call, _stringFormat));
+                    if (method.IsStatic)
+                        il.InsertBefore(instruction, il.Create(OpCodes.Ldnull));
+                    else
+                        il.InsertBefore(instruction, il.Create(OpCodes.Ldarg_0));
+
+                    il.InsertBefore(instruction, il.Create(OpCodes.Call, _debugLog));
+
 
                     il.InsertBefore(instruction, il.Create(OpCodes.Ldloc, transformVariable));
                     il.InsertBefore(instruction, il.Create(OpCodes.Ldloc, setMethodParameterVariable));
-                    
+
 
                     LogDebug($"{ModuleDefinition.Assembly.Name} Redirected {rewritingFor}: {method.DeclaringType.Name}::{method.Name} via fallback inline IL");
                 }
@@ -221,7 +234,7 @@ namespace TransformSetterCallRedirector.Fody
             _interceptSetLocalPosition = _interceptorType.Methods.First(m => m.Name == "InterceptSetLocalPosition");
             _interceptSetRotation = _interceptorType.Methods.First(m => m.Name == "InterceptSetRotation");
             _interceptSetScale = _interceptorType.Methods.First(m => m.Name == "InterceptSetScale");
-            
+
             _replaceCallsFromNamespacesRegex = _callRedirectorAttribute.ConstructorArguments[1].Value?.ToString();
             _excludeFullMethodNameRegex = _callRedirectorAttribute.Properties.Single(p => p.Name == nameof(TransformSetterCallRedirectorAttribute.ExcludeFullMethodNameRegex)).Argument.Value?.ToString();
         }
