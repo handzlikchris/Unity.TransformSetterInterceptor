@@ -10,7 +10,7 @@ to some interceptor code that you can control, like
 Unfortunately this is not always possible or easy.
 
 This tool will help you do exactly that **but automatically and without modifying any of your source code**. 
-![Transform Setter Interceptor Workflow](/_github/TransforSetterInterceptorWorkflow.gif)
+![Transform Setter Interceptor Workflow](/_github/TransforSetterInterceptorWorkflow_.gif)
 
 
 ## Approach
