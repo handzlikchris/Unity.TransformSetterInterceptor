@@ -1,8 +1,3 @@
-
-
-
-
-
 # What is changing the tranform (position / rotation / scale)?
 
 When working with Unity you've probably asked that question when a transform position/rotation/scale is changing and you have no idea why.
@@ -77,7 +72,9 @@ There's a simple script `TransformSetterInterceptorFilter` that'll allow you to 
 ### Runtime Performance
 At build time calls to transform setters will be intercepted and directed to static interceptor class, that should not have significant impact on performance as it's simply adding static method call.
 
-For fallback weaving IL instructions are added at every place that is redirected, additionally Debug.Log will be called, this call actually gets StackTrace which is rather quite costly.
+For fallback weaving IL instructions are added at every place that is redirected and Debug.Log will be called for all of them, this call actually gets StackTrace which is rather quite costly. You can stop fallback weaving by removing `FallbackSampleNameFormat` from configuration.
+
+*At later stage I'll look into weaving additional 'if' statements so it can check if change should be printed.*
 
 ### Configuring Interception
 In the package, you'll find `TransformSetterCallInterceptor.cs` with intercept methods. You can adjust that as needed. There's also an assembly attribute specified `TransformSetterCallRedirector` where you can configure some more options.
