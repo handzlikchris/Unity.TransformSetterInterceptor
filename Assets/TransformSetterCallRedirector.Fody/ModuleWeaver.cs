@@ -146,8 +146,7 @@ namespace TransformSetterCallRedirector.Fody
                         il.InsertBefore(instruction, il.Create(OpCodes.Ldarg_0));
 
                     il.InsertBefore(instruction, il.Create(OpCodes.Call, _debugLog));
-
-
+                    
                     il.InsertBefore(instruction, il.Create(OpCodes.Ldloc, transformVariable));
                     il.InsertBefore(instruction, il.Create(OpCodes.Ldloc, setMethodParameterVariable));
 
