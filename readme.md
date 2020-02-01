@@ -58,7 +58,7 @@ You can do that via `manifest.json` file located in `/Packages` folder. You'll h
 }
 ```
 
-2)  Download and import [UnityEventCallRedirector.unitypackage](https://github.com/handzlikchris/Unity.TransformSetterInterceptor/raw/master/_github/TransformSetterInterceptor.unitypackage)
+2)  Download and import [TransformSetterInterceptor](https://github.com/handzlikchris/Unity.TransformSetterInterceptor/raw/master/_github/TransformSetterInterceptor.unitypackage)
 3) Recompile
 - If you see an error
 `'A configuration lists 'TransformSetterCallRedirector' but the assembly file wasn't found in the search paths'`
