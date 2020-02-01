@@ -269,8 +269,8 @@
     <Reference Include="Mono.Cecil_debug">
       <HintPath>F:/_src/!Unity/InterceptingTransformSetters/Assets/TransformSetterCallRedirector.Fody/RequiredDll/Mono.Cecil_debug.dll</HintPath>
     </Reference>
-    <Reference Include="Malimbe.PropertySerializationAttribute">
-      <HintPath>F:/_src/!Unity/InterceptingTransformSetters/Library/PackageCache/io.extendreality.malimbe@9.6.5/Runtime/Malimbe.PropertySerializationAttribute.dll</HintPath>
+    <Reference Include="Malimbe.BehaviourStateRequirementMethod">
+      <HintPath>F:/_src/!Unity/InterceptingTransformSetters/Library/PackageCache/io.extendreality.malimbe@9.6.5/Runtime/Malimbe.BehaviourStateRequirementMethod.dll</HintPath>
     </Reference>
     <Reference Include="Malimbe.MemberChangeMethod">
       <HintPath>F:/_src/!Unity/InterceptingTransformSetters/Library/PackageCache/io.extendreality.malimbe@9.6.5/Runtime/Malimbe.MemberChangeMethod.dll</HintPath>
@@ -278,8 +278,8 @@
     <Reference Include="Malimbe.MemberClearanceMethod">
       <HintPath>F:/_src/!Unity/InterceptingTransformSetters/Library/PackageCache/io.extendreality.malimbe@9.6.5/Runtime/Malimbe.MemberClearanceMethod.dll</HintPath>
     </Reference>
-    <Reference Include="Malimbe.BehaviourStateRequirementMethod">
-      <HintPath>F:/_src/!Unity/InterceptingTransformSetters/Library/PackageCache/io.extendreality.malimbe@9.6.5/Runtime/Malimbe.BehaviourStateRequirementMethod.dll</HintPath>
+    <Reference Include="Malimbe.PropertySerializationAttribute">
+      <HintPath>F:/_src/!Unity/InterceptingTransformSetters/Library/PackageCache/io.extendreality.malimbe@9.6.5/Runtime/Malimbe.PropertySerializationAttribute.dll</HintPath>
     </Reference>
     <Reference Include="Malimbe.XmlDocumentationAttribute">
       <HintPath>F:/_src/!Unity/InterceptingTransformSetters/Library/PackageCache/io.extendreality.malimbe@9.6.5/Runtime/Malimbe.XmlDocumentationAttribute.dll</HintPath>

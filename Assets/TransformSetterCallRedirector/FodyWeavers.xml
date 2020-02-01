@@ -1,6 +1,6 @@
 ﻿<Weavers>
   <Malimbe.FodyRunner>
-    <LogLevel>Info, Error, Warning</LogLevel>
+    <LogLevel>Error, Warning</LogLevel>
     <AssemblyNameRegex>^Assembly-CSharp</AssemblyNameRegex>
   </Malimbe.FodyRunner>
   <TransformSetterCallRedirector FallbackSampleNameFormat="target: {0}, setter: {1}, value: {2}" />
