@@ -9,6 +9,9 @@ to some interceptor code that you can control, like
 
 Unfortunately this is not always possible or easy.
 
+> There's now a simpler to use tool that'll allow you to add events to Unity dlls. With that it's possible to write event driven code, eg `transform.SetPositionExecuting += (sender, e) => <your handler code>`
+https://github.com/handzlikchris/Unity.MissingUnityEvents
+
 This tool will help you do exactly that **but automatically and without modifying any of your source code**. 
 ![Transform Setter Interceptor Workflow](/_github/TransforSetterInterceptorWorkflow_.gif)
 
