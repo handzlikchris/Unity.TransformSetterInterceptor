@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class TransformSetter : MonoBehaviour
 {
-    public List<GameObject> SetTargets; //tst
+    public List<GameObject> SetTargets; //tst 
 
     private int iteration = 0;
     IEnumerator SetTransformValuesCoroutine()
@@ -12,23 +12,29 @@ public class TransformSetter : MonoBehaviour
         while (true)
         {
             iteration++;
-            SetTransformValues();
-            yield return new WaitForSeconds(1);  
+            SetTransformValues(); 
+            yield return new WaitForSeconds(1); 
         }
     }
 
-    private void SetTransformValues()          
+    private void SetTransformValues()
     {
         foreach (var target in SetTargets)
         { 
-            target.transform.position = new Vector3(iteration, iteration, iteration);    
+            SetPosition(target);    
             target.transform.rotation = Quaternion.Euler(iteration, iteration, iteration);  
             target.transform.localScale = new Vector3(iteration, iteration, iteration); 
         }
     }
 
-    void Start()
+    private void SetPosition(GameObject target) 
     {
+        target.transform.position = new Vector3(1, 2, 3);
+    }
+
+    void Start()  
+    {
+        SendMessage("HandleGlobalInterceptorCallback", new object [3] {"", null, (object)9}, SendMessageOptions.DontRequireReceiver);
         StartCoroutine(SetTransformValuesCoroutine());
     }
 }

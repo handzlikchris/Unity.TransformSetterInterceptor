@@ -32,7 +32,7 @@ namespace Malimbe.FodyRunner.UnityIntegration
                 IReadOnlyCollection<string> searchPaths = WeaverPathsHelper.GetSearchPaths().ToList();
                 Runner runner = new Runner(new Logger());
                 runner.Configure(searchPaths, searchPaths);
-
+                
                 foreach (Assembly assembly in GetAllAssemblies())
                 {
                     if (!WeaveAssembly(assembly, runner))

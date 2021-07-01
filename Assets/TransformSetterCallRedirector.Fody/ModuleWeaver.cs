@@ -32,7 +32,6 @@ namespace TransformSetterCallRedirector.Fody
         private MethodReference _memberInfoGetName;
         private MethodReference _stringFormat;
         private CustomAttribute _callRedirectorAttribute;
-        private string _fallbackSampleFormat;
         private MethodReference _transformSetPosition;
         private MethodReference _transformSetLocalPosition;
         private MethodReference _transformSetRotation;
@@ -42,8 +41,11 @@ namespace TransformSetterCallRedirector.Fody
         private MethodDefinition _interceptSetRotation;
         private MethodDefinition _interceptSetScale;
         private MethodReference _debugLog;
+        private MethodReference _sendMessage;
         private MethodReference _getTransform;
         private TypeReference _transformType;
+        private TypeReference _objectArrayArgsType;
+        private TypeReference _objectType;
         private TypeReference _vector3Type;
         private TypeReference _quaternionType;
 
@@ -62,12 +64,6 @@ namespace TransformSetterCallRedirector.Fody
                 LogInfo($"Assembly :{ModuleDefinition.Assembly.Name} does not specify attribute " +
                         $"{FullAttributeName} which is needed for processing");
                 LoadXmlSetup();
-
-                if (string.IsNullOrEmpty(_fallbackSampleFormat))
-                {
-                    LogInfo($"Assembly :{ModuleDefinition.Assembly.Name} no XML {FallbackSampleNameFormatName} string specified, rewrite not performed.");
-                    return;
-                }
             }
             else
             {
@@ -86,12 +82,12 @@ namespace TransformSetterCallRedirector.Fody
 
             foreach (var arg in redirectMethodsSetup)
             {
-                var methodWithInstructionsToReplace = FindMethodsWithInstructionsCallingTransformSetter(arg.RedirectCallsFrom.Resolve());
-                InterceptUnityEventInvokeCalls(methodWithInstructionsToReplace, arg.RedirectCallsTo, arg.RedirectingFor, arg.SetMethodParameterTypeReference);
+                var methodWithInstructionsToReplace = FindMethodsWithInstructionsCalling(arg.RedirectCallsFrom.Resolve());
+                ReplaceMethodCalls(methodWithInstructionsToReplace, arg.RedirectCallsTo, arg.RedirectingFor, arg.SetMethodParameterTypeReference);
             }
         }
 
-        private void InterceptUnityEventInvokeCalls(List<MethodDefinitionInstructionToReplacePair> methodWithInstructionsToReplace,
+        private void ReplaceMethodCalls(List<MethodDefinitionInstructionToReplacePair> methodWithInstructionsToReplace,
             MethodDefinition replaceWithInterceptorMethod, string rewritingFor, TypeReference setMethodParameterType)
         {
             foreach (var methodWithInstructionToReplace in methodWithInstructionsToReplace)
@@ -114,42 +110,59 @@ namespace TransformSetterCallRedirector.Fody
 
                     LogDebug($"Redirected: {method.DeclaringType.Name}::{method.Name} via interceptor");
                 }
-                else if (!string.IsNullOrEmpty(_fallbackSampleFormat))
-                {
+                else
+                { 
                     var setMethodParameterVariable = new VariableDefinition(setMethodParameterType);
                     il.Body.Variables.Add(setMethodParameterVariable);
                     var transformVariable = new VariableDefinition(_transformType);
                     il.Body.Variables.Add(transformVariable);
+                    var arrayArgsVariable = new VariableDefinition(_objectArrayArgsType);
+                    il.Body.Variables.Add(arrayArgsVariable);
 
-
-                    il.InsertBefore(instruction, il.Create(OpCodes.Stloc, setMethodParameterVariable));
-                    il.InsertBefore(instruction, il.Create(OpCodes.Stloc, transformVariable));
-
-
-                    il.InsertBefore(instruction, il.Create(OpCodes.Ldstr, $"{rewritingFor}: {_fallbackSampleFormat}"));
-                    il.InsertBefore(instruction, il.Create(OpCodes.Ldloc, transformVariable));
-                    if (method.IsStatic)
+                    var callSendMessageGlobalHandlerInstructions = new Instruction[]
                     {
-                        il.InsertBefore(instruction, il.Create(OpCodes.Ldstr, "Static:" + method.FullName));
-                    }
-                    else
-                    {
-                        il.InsertBefore(instruction, il.Create(OpCodes.Ldarg_0));
-                        il.InsertBefore(instruction, il.Create(OpCodes.Callvirt, _unityObjectGetName));
-                    }
-                    il.InsertBefore(instruction, il.Create(OpCodes.Ldloc, setMethodParameterVariable));
-                    il.InsertBefore(instruction, il.Create(OpCodes.Box, setMethodParameterType));
-                    il.InsertBefore(instruction, il.Create(OpCodes.Call, _stringFormat));
-                    if (method.IsStatic)
-                        il.InsertBefore(instruction, il.Create(OpCodes.Ldnull));
-                    else
-                        il.InsertBefore(instruction, il.Create(OpCodes.Ldarg_0));
+                        il.Create(OpCodes.Stloc, setMethodParameterVariable),
+                        il.Create(OpCodes.Stloc, transformVariable),
 
-                    il.InsertBefore(instruction, il.Create(OpCodes.Call, _debugLog));
+                        //create Args array
+                        il.Create(OpCodes.Ldc_I4_3),
+                        il.Create(OpCodes.Newarr, _objectType),
+
+                        //first index 'this' for calee
+                        il.Create(OpCodes.Dup),
+                        il.Create(OpCodes.Ldc_I4_0),
+                        il.Create(OpCodes.Ldarg_0),
+                        il.Create(OpCodes.Stelem_Ref),
+
+                        //second index, calling method name
+                        il.Create(OpCodes.Dup),
+                        il.Create(OpCodes.Ldc_I4_1),
+                        il.Create(OpCodes.Ldstr, $"{(method.IsStatic ? "Static:" : "")}{method.FullName}"),
+                        il.Create(OpCodes.Stelem_Ref),
+
+                        //throd index, value
+                        il.Create(OpCodes.Dup),
+                        il.Create(OpCodes.Ldc_I4_2),
+                        il.Create(OpCodes.Ldloc, setMethodParameterVariable),
+                        setMethodParameterType.IsValueType ? il.Create(OpCodes.Box, setMethodParameterType) : il.Create(OpCodes.Nop),
+                        il.Create(OpCodes.Stelem_Ref),
+
+                        il.Create(OpCodes.Stloc, arrayArgsVariable),
+
+                        //call Component.SendMessage()
+                        il.Create(OpCodes.Ldloc, transformVariable),
+                        il.Create(OpCodes.Ldstr, "HandleGlobalInterceptorCallback"),
+                        il.Create(OpCodes.Ldloc, arrayArgsVariable),
+                        il.Create(OpCodes.Ldc_I4, (int)SendMessageOptions.DontRequireReceiver),
+                        il.Create(OpCodes.Callvirt, _sendMessage),
+
+                        //re-add args on stack so original method can call it
+                        il.Create(OpCodes.Ldloc, transformVariable),
+                        il.Create(OpCodes.Ldloc, setMethodParameterVariable)
+                    };
                     
-                    il.InsertBefore(instruction, il.Create(OpCodes.Ldloc, transformVariable));
-                    il.InsertBefore(instruction, il.Create(OpCodes.Ldloc, setMethodParameterVariable));
-
+                    foreach (var i in callSendMessageGlobalHandlerInstructions)
+                        il.InsertBefore(instruction, i);
 
                     LogDebug($"{ModuleDefinition.Assembly.Name} Redirected {rewritingFor}: {method.DeclaringType.Name}::{method.Name} via fallback inline IL");
                 }
@@ -160,7 +173,7 @@ namespace TransformSetterCallRedirector.Fody
             LogInfo($"{ModuleDefinition.Assembly.Name} Redirected {rewritingFor}: {methodWithInstructionsToReplace.Count} calls via {(replaceWithInterceptorMethod != null ? "interceptor" : "fallback inline IL")}");
         }
 
-        private List<MethodDefinitionInstructionToReplacePair> FindMethodsWithInstructionsCallingTransformSetter(MethodDefinition callingToMethod)
+        private List<MethodDefinitionInstructionToReplacePair> FindMethodsWithInstructionsCalling(MethodDefinition callingToMethod)
         {
             var methodWithInstructionsToReplace = new List<MethodDefinitionInstructionToReplacePair>();
 
@@ -203,10 +216,13 @@ namespace TransformSetterCallRedirector.Fody
             _stringFormat = ImportMethod(typeof(string),
                 m => m.FullName == "System.String System.String::Format(System.String,System.Object,System.Object,System.Object)");
             _debugLog = ImportMethod(typeof(Debug), m => m.Name == nameof(Debug.Log) && m.Parameters.Count == 2);
+            _sendMessage = ImportMethod(typeof(Component), m => m.Name == nameof(Component.SendMessage) && m.Parameters.Count == 3);
 
             _getTransform = ImportPropertyGetter(typeof(GameObject), m => m.Name == nameof(GameObject.transform));
 
             _transformType = ModuleDefinition.ImportReference(typeof(Transform));
+            _objectArrayArgsType = ModuleDefinition.ImportReference(typeof(object[]));
+            _objectType = ModuleDefinition.ImportReference(typeof(object));
             _vector3Type = ModuleDefinition.ImportReference(typeof(Vector3));
             _quaternionType = ModuleDefinition.ImportReference(typeof(Quaternion));
 
@@ -240,7 +256,6 @@ namespace TransformSetterCallRedirector.Fody
 
         private void LoadXmlSetup()
         {
-            _fallbackSampleFormat = Config.Attribute(FallbackSampleNameFormatName)?.Value;
             _replaceCallsFromNamespacesRegex = Config.Attribute(FallbackReplaceCallsFromNamespacesRegexName)?.Value ?? DefaultFallbackReplaceCallsFromNamespacesRegex;
             _excludeFullMethodNameRegex = Config.Attribute(FallbackExcludeFullMethodNameRegexName)?.Value ?? DefaultFallbackExcludeFullMethodNameRegex;
         }
