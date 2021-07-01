@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class TransformSetter : MonoBehaviour
 {
-    public List<GameObject> SetTargets;
+    public List<GameObject> SetTargets; //tst
 
     private int iteration = 0;
     IEnumerator SetTransformValuesCoroutine()

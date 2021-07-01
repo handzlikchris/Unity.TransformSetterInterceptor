@@ -13,11 +13,11 @@
     <ProductVersion>10.0.20506</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <RootNamespace></RootNamespace>
-    <ProjectGuid>{90931dfe-c4b7-9a4d-e5c4-f6d0fb92c679}</ProjectGuid>
+    <ProjectGuid>{3efef60b-b8a3-576f-a3a8-a354fb34dcc1}</ProjectGuid>
     <ProjectTypeGuids>{E097FAD1-6243-4DAD-9C02-E9B9EFC3FFC1};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <AssemblyName>TransformSetterCallRedirector.Attribute</AssemblyName>
+    <AssemblyName>Weaver.Attributes</AssemblyName>
     <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <BaseDirectory>.</BaseDirectory>
@@ -52,8 +52,10 @@
     <ImplicitlyExpandDesignTimeFacades>false</ImplicitlyExpandDesignTimeFacades>
   </PropertyGroup>
   <ItemGroup>
-     <Compile Include="Assets\TransformSetterCallRedirector.Attribute\TransformSetterCallRedirectorAttribute.cs" />
-     <None Include="Assets\TransformSetterCallRedirector.Attribute\TransformSetterCallRedirector.Attribute.asmdef" />
+     <Compile Include="Assets\TransformSetterCallRedirector.Fody\Weaver\Attributes\MethodTimerAttribute.cs" />
+     <Compile Include="Assets\TransformSetterCallRedirector.Fody\Weaver\Attributes\OnChangedAttribute.cs" />
+     <Compile Include="Assets\TransformSetterCallRedirector.Fody\Weaver\Attributes\ProfileSampleAttribute.cs" />
+     <None Include="Assets\TransformSetterCallRedirector.Fody\Weaver\Attributes\Weaver.Attributes.asmdef" />
  <Reference Include="UnityEngine">
  <HintPath>C:/Program Files/Unity/Hub/Editor/2020.3.3f1/Editor/Data/Managed/UnityEngine/UnityEngine.dll</HintPath>
  </Reference>
@@ -284,15 +286,6 @@
  </Reference>
  <Reference Include="UnityEditor.WindowsStandalone.Extensions">
  <HintPath>C:/Program Files/Unity/Hub/Editor/2020.3.3f1/Editor/Data/PlaybackEngines/WindowsStandaloneSupport/UnityEditor.WindowsStandalone.Extensions.dll</HintPath>
- </Reference>
- <Reference Include="Mono.Cecil_debug">
- <HintPath>F:/_src/!Unity/InterceptingTransformSetters/Assets/TransformSetterCallRedirector.Fody/RequiredDll/Mono.Cecil_debug.dll</HintPath>
- </Reference>
- <Reference Include="FodyHelpers_debug">
- <HintPath>F:/_src/!Unity/InterceptingTransformSetters/Assets/TransformSetterCallRedirector.Fody/RequiredDll/FodyHelpers_debug.dll</HintPath>
- </Reference>
- <Reference Include="Malimbe.FodyRunner">
- <HintPath>F:/_src/!Unity/InterceptingTransformSetters/Assets/Malimbe/Editor/Malimbe.FodyRunner.dll</HintPath>
  </Reference>
  <Reference Include="netstandard">
  <HintPath>C:/Program Files/Unity/Hub/Editor/2020.3.3f1/Editor/Data/NetStandard/ref/2.0.0/netstandard.dll</HintPath>
