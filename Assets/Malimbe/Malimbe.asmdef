@@ -1,0 +1,23 @@
+{
+    "name": "Malimbe",
+    "rootNamespace": "",
+    "references": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "FodyCommon_3.3.5.0.dll",
+        "FodyHelpers_3.3.5.0.dll",
+        "FodyIsolated_3.3.5.0.dll",
+        "Malimbe.FodyRunner.dll",
+        "Mono.Cecil.Mdb_0.10.0.0.dll",
+        "Mono.Cecil.Pdb_0.10.0.0.dll",
+        "Mono.Cecil.Rocks_0.10.0.0.dll",
+        "Mono.Cecil_0.10.0.0.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

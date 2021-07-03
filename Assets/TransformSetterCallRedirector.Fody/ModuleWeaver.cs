@@ -1,4 +1,6 @@
-﻿using Mono.Cecil.Rocks;
+﻿using Assets.TransformSetterCallRedirector.Attribute;
+using Fody;
+using Mono.Cecil.Rocks;
 using UnityEngine;
 
 namespace TransformSetterCallRedirector.Fody
@@ -7,11 +9,9 @@ namespace TransformSetterCallRedirector.Fody
     using System.Collections.Generic;
     using System.Linq;
     using System.Text.RegularExpressions;
-    using global::Fody;
     using Mono.Cecil;
     using Mono.Cecil.Cil;
     using System.Reflection;
-    using Assets.TransformSetterCallRedirector.Attribute;
 
     public sealed class ModuleWeaver : BaseModuleWeaver
     {

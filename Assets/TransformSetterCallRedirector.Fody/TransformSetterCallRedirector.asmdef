@@ -1,14 +1,18 @@
 {
     "name": "TransformSetterCallRedirector.Fody",
+    "rootNamespace": "",
     "references": [
-        "TransformSetterCallRedirector.Attribute"
+        "TransformSetterCallRedirector"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
-    "overrideReferences": false,
-    "precompiledReferences": [],
-    "autoReferenced": true,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "Mono.Cecil_0.10.0.0.dll",
+        "FodyHelpers_3.3.5.0.dll"
+    ],
+    "autoReferenced": false,
     "defineConstraints": [],
     "versionDefines": [],
     "noEngineReferences": false
