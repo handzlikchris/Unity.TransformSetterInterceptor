@@ -15,6 +15,9 @@ https://github.com/handzlikchris/Unity.MissingUnityEvents
 This tool will help you do exactly that **but automatically and without modifying any of your source code**. 
 ![Transform Setter Interceptor Workflow](/_github/TransforSetterInterceptorWorkflow_.gif)
 
+> # Making this tool better
+> I'm working on a visual transform debugger, that'll make this tool to be incredibly simple to use and will add more features. I need your help if you got 4 minutes to spare.
+> In following link https://forms.gle/SE6As64EZjTGGZHH7 there's a short video that shows POC and 2 questions to answer. Please have a look!
 
 ## Approach
 The tool will use IL Weaving and will redirect all the set calls to `transform.position`, `transform.rotation` and `transform.scale` to `TransformSetterCallInterceptor` where you could add any actions needed. 
