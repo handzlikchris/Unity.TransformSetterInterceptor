@@ -15,9 +15,12 @@ https://github.com/handzlikchris/Unity.MissingUnityEvents
 This tool will help you do exactly that **but automatically and without modifying any of your source code**. 
 ![Transform Setter Interceptor Workflow](/_github/TransforSetterInterceptorWorkflow_.gif)
 
-> # Making this tool better
-> I'm working on a visual transform debugger, that'll make this tool to be incredibly simple to use and will add more features. I need your help if you got 4 minutes to spare.
-> In following link https://forms.gle/SE6As64EZjTGGZHH7 there's a short video that shows POC and 2 questions to answer. Please have a look!
+> # Making This Tool Better - Visual Transform Changes Debugger
+> I've went further with this concept and created a tool that focuses on tracking ANY changes made to ANY transforms which is then neatly laid out in friendly GUI. Check it out at:
+> https://immersiveVRTools.com/projects/transform-changes-debugger
+> 
+> [![Visual Transform Changes Debugger](/_github/transform-changes-debugger-youtube-thumb.jpg)](https://youtu.be/6YjrgHpE2x4 "Play")
+> *features showcase video*
 
 ## Approach
 The tool will use IL Weaving and will redirect all the set calls to `transform.position`, `transform.rotation` and `transform.scale` to `TransformSetterCallInterceptor` where you could add any actions needed. 
